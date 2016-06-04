@@ -1,4 +1,6 @@
-import urllib
+import urllib.parse
+import urllib.request
+import os
 import pyodbc
 import json
 import time
@@ -6,16 +8,14 @@ import ssl
 
 serviceurl = "http://maps.googleapis.com/maps/api/geocode/json?"
 
-# Deal with SSL certificate anomalies Python > 2.7
-# scontext = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
-scontext = None
-
-DBfile = 'geodata.accdb'
-conn = pyodbc.connect(r'Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ='+DBfile)
+dataFile = "geodata.accdb"
+databaseFile = os.getcwd() + "\\" + dataFile
+connectionString = "Driver={Microsoft Access Driver (*.mdb, *.accdb)}; Dbq=%s" % databaseFile
+conn = pyodbc.connect(connectionString)
 cur = conn.cursor()
 
 cur.execute('''
-CREATE TABLE IF NOT EXISTS Locations (address TEXT, geodata TEXT)''')
+CREATE TABLE Locations (address TEXT, geodata TEXT)''')
 
 fh = open("where.data")
 count = 0
@@ -23,7 +23,7 @@ for line in fh:
     if count > 200 : break
     address = line.strip()
     print('')
-    cur.execute("SELECT geodata FROM Locations WHERE address= ?", (buffer(address), ))
+    cur.execute("SELECT geodata FROM Locations WHERE address= ?", (address, ))
 
     try:
         data = cur.fetchone()[0]
@@ -33,15 +33,13 @@ for line in fh:
         pass
 
     print('Resolving', address)
-    url = serviceurl + urllib.urlencode({"sensor":"false", "address": address})
+    url = serviceurl + urllib.parse.urlencode({"sensor":"false", "address": address})
     print('Retrieving', url)
-    uh = urllib.urlopen(url, context=scontext)
+    uh = urllib.request.urlopen(url)
     data = uh.read()
-    print('Retrieved',len(data),'characters',data[:20].replace('\n',' '))
-    count = count + 1
+    count += 1
     try: 
         js = json.loads(str(data))
-        # print js  # We print in case unicode causes an error
     except: 
         continue
 
@@ -51,7 +49,6 @@ for line in fh:
         break
 
     cur.execute('''INSERT INTO Locations (address, geodata) 
-            VALUES ( ?, ? )''', ( buffer(address),buffer(data) ) )
+            VALUES ( ?, ? )''', ( address,data ) )
     conn.commit() 
-    time.sleep(1)
-
+    time.sleep(2)
