@@ -10,3 +10,7 @@ geoload_access.py load geomatic information of those places from Google Maps and
 geodump.py select all locations and visualise them using where.js
 
 __Parsing__ contains some basic exercises on extracting information from different format using python.
+
+Package name | Package description
+--- | --- 
+Seconds | 301 
